@@ -4,6 +4,7 @@
   <img src="public/logo.png" alt="MoonTVPlus Logo" width="120">
 </div>
 
+## ⚠️ 请某些人停止你的抄袭行为，不要我上什么功能你就抄什么，借鉴≠抄袭
 
 > 🎬 **MoonTVPlus** 是基于 [MoonTV v100](https://github.com/MoonTechLab/LunaTV) 二次开发的增强版影视聚合播放器。它在原版基础上新增了外部播放器支持、视频超分、弹幕系统、评论抓取等实用功能，提供更强大的观影体验。
 
@@ -114,7 +115,7 @@ Cloudflare Workers 提供免费的边缘计算服务，通过 GitHub Actions 可
 - 点击 "Create Token"，选择 "Edit Cloudflare Workers" 模板
 - 或使用自定义 Token，需要以下权限：
   - Account - Cloudflare Workers Scripts - Edit
-  - Account - Cloudflare Workers KV Storage - Edit
+  - Account - D1 - Edit（仅在使用 D1 数据库时需要）
 - 创建后复制生成的 API Token
 - 在 Dashboard 首页右侧可以看到你的 Account ID
 
@@ -213,7 +214,7 @@ services:
     container_name: moontv-kvrocks
     restart: unless-stopped
     volumes:
-      - kvrocks-data:/var/lib/kvrocks
+      - kvrocks-data:/var/lib/kvrocks/data
     networks:
       - moontv-network
 networks:
