@@ -323,7 +323,7 @@ async function refreshRecordAndFavorites() {
 
               // 收集更新信息用于邮件
               const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-              const playUrl = `${siteUrl}/play?source=${source}&id=${id}`;
+              const playUrl = `${siteUrl}/play?source=${source}&id=${id}&title=${encodeURIComponent(fav.title)}`;
               userUpdates.push({
                 title: fav.title,
                 oldEpisodes: fav.total_episodes,
