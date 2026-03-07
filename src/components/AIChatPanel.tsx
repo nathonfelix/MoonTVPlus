@@ -2,6 +2,8 @@
 'use client';
 
 import { Bot, Loader2, Send, Sparkles, Trash2,X } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
@@ -33,6 +35,8 @@ export default function AIChatPanel({
   useDrawer = false,
   drawerWidth = 'w-full md:w-[25%]',
 }: AIChatPanelProps) {
+  const pathname = usePathname();
+
   // 使用 useMemo 稳定 storage key，只在实际内容变化时才改变
   const storageKey = useMemo(() => {
     if (context?.title) {
@@ -52,6 +56,14 @@ export default function AIChatPanel({
   const prevStorageKeyRef = useRef<string>(storageKey);
   const abortControllerRef = useRef<AbortController | null>(null);
   const hasLoadedRef = useRef(false);
+
+  // 将《》包裹的影视名称转换为链接
+  const convertTitleToLink = (content: string): string => {
+    return content.replace(/《([^》]+)》/g, (match, title) => {
+      const encodedTitle = encodeURIComponent(title);
+      return `[《${title}》](/play?title=${encodedTitle})`;
+    });
+  };
 
   // 自动滚动到底部
   const scrollToBottom = () => {
@@ -424,9 +436,29 @@ export default function AIChatPanel({
                         {message.content}
                       </p>
                     ) : (
-                      <div className='prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:text-gray-100 dark:prose-pre:bg-gray-900 prose-code:text-purple-600 dark:prose-code:text-purple-400 prose-code:bg-purple-50 dark:prose-code:bg-purple-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:my-2 prose-ol:my-2 prose-li:my-1'>
-                        <ReactMarkdown remarkPlugins={[remarkGfm as any]}>
-                          {message.content}
+                      <div className='prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:text-gray-100 dark:prose-pre:bg-gray-900 prose-code:text-purple-600 dark:prose-code:text-purple-400 prose-code:bg-purple-50 dark:prose-code:bg-purple-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-a:text-inherit dark:prose-a:text-inherit prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:my-2 prose-ol:my-2 prose-li:my-1'>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm as any]}
+                          components={{
+                            a: ({ node, href, children, ...props }) => {
+                              // 如果是内部链接（以 / 开头），使用 Next.js Link
+                              if (href?.startsWith('/')) {
+                                // 如果当前在 /play 页面且链接也是 /play，不做处理（返回纯文本）
+                                if (pathname === '/play' && href.startsWith('/play')) {
+                                  return <span>{children}</span>;
+                                }
+                                return (
+                                  <Link href={href} {...props}>
+                                    {children}
+                                  </Link>
+                                );
+                              }
+                              // 外部链接使用普通 a 标签
+                              return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+                            }
+                          }}
+                        >
+                          {convertTitleToLink(message.content)}
                         </ReactMarkdown>
                       </div>
                     )}
@@ -610,9 +642,29 @@ export default function AIChatPanel({
                         {message.content}
                       </p>
                     ) : (
-                      <div className='prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:text-gray-100 dark:prose-pre:bg-gray-900 prose-code:text-purple-600 dark:prose-code:text-purple-400 prose-code:bg-purple-50 dark:prose-code:bg-purple-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:my-2 prose-ol:my-2 prose-li:my-1'>
-                        <ReactMarkdown remarkPlugins={[remarkGfm as any]}>
-                          {message.content}
+                      <div className='prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-p:leading-relaxed prose-pre:bg-gray-800 prose-pre:text-gray-100 dark:prose-pre:bg-gray-900 prose-code:text-purple-600 dark:prose-code:text-purple-400 prose-code:bg-purple-50 dark:prose-code:bg-purple-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-a:text-inherit dark:prose-a:text-inherit prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 dark:prose-strong:text-white prose-ul:my-2 prose-ol:my-2 prose-li:my-1'>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm as any]}
+                          components={{
+                            a: ({ node, href, children, ...props }) => {
+                              // 如果是内部链接（以 / 开头），使用 Next.js Link
+                              if (href?.startsWith('/')) {
+                                // 如果当前在 /play 页面且链接也是 /play，不做处理（返回纯文本）
+                                if (pathname === '/play' && href.startsWith('/play')) {
+                                  return <span>{children}</span>;
+                                }
+                                return (
+                                  <Link href={href} {...props}>
+                                    {children}
+                                  </Link>
+                                );
+                              }
+                              // 外部链接使用普通 a 标签
+                              return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+                            }
+                          }}
+                        >
+                          {convertTitleToLink(message.content)}
                         </ReactMarkdown>
                       </div>
                     )}
