@@ -11,6 +11,9 @@ import LyricsPiPWindow from '@/components/LyricsPiPWindow';
 const SPECTRUM_BIN_COUNT = 96;
 const SPECTRUM_IDLE_LEVEL = 0.02;
 const SPECTRUM_EDGE_TRIM = 8;
+const SPECTRUM_REFERENCE_VOLUME = 10;
+const SPECTRUM_MIN_VOLUME = 5;
+const SPECTRUM_MAX_REFERENCE_VOLUME = 15;
 
 type MusicSource = 'wy' | 'tx' | 'kw' | 'kg' | 'mg';
 
@@ -128,9 +131,9 @@ function AudioSpectrumCanvas({
       ctx.clearRect(0, 0, width, height);
 
       const targetPitch = compact ? 4.2 : 4.6;
-      const gap = 1;
+      const gap = Math.max(1, Math.round(dpr));
       const count = Math.max(1, Math.floor(rect.width / targetPitch));
-      const barWidth = Math.max(2, Math.floor((width - gap * (count - 1)) / count));
+      const barWidth = Math.max(2 * dpr, (width - gap * (count - 1)) / count);
       const cubeHeight = compact ? Math.max(2, Math.round(2 * dpr)) : Math.max(2, Math.round(2.5 * dpr));
       const cubeGap = 1;
       const scaleBase = compact ? height * 1.55 : height * 1.42;
@@ -153,7 +156,7 @@ function AudioSpectrumCanvas({
       for (let i = 0; i < count; i++) {
         const q = Math.max(SPECTRUM_IDLE_LEVEL, sampleBar(i)) * scaleBase;
         const cubeCount = Math.max(1, Math.ceil(q / Math.max(1, barWidth * 0.9)));
-        const x = i * (barWidth + gap);
+        const x = i === count - 1 ? width - barWidth : i * (barWidth + gap);
 
         for (let segment = 0; segment < cubeCount; segment++) {
           const y = height - segment * (cubeHeight + cubeGap);
@@ -172,7 +175,7 @@ function AudioSpectrumCanvas({
 
   return (
     <div
-      className={`relative overflow-hidden ${compact ? 'h-6' : 'h-8'}`}
+      className={`relative w-full overflow-hidden ${compact ? 'h-6' : 'h-8'}`}
       aria-hidden="true"
     >
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full opacity-50" />
@@ -283,6 +286,7 @@ export default function MusicPage() {
   const spectrumDataRef = useRef<Uint8Array | null>(null);
   const spectrumFrameRef = useRef<number | null>(null);
   const currentTimeRef = useRef(0);
+  const volumeRef = useRef(volume);
   const spectrumSeedRef = useRef(Math.random() * Math.PI * 2);
 
   const mapSong = (song: any): Song => ({
@@ -654,6 +658,7 @@ export default function MusicPage() {
 
   // 同步音量状态到 audio 元素
   useEffect(() => {
+    volumeRef.current = volume;
     if (audioRef.current) {
       audioRef.current.volume = volume / 100;
     }
@@ -1770,6 +1775,11 @@ export default function MusicPage() {
       if (isActive && analyser && data) {
         analyser.getByteFrequencyData(data);
         const usableBins = Math.max(1, Math.floor(data.length * 0.88));
+        const visualVolume = Math.max(SPECTRUM_MIN_VOLUME, volumeRef.current || SPECTRUM_REFERENCE_VOLUME);
+        const visualVolumeScale =
+          visualVolume > SPECTRUM_MAX_REFERENCE_VOLUME
+            ? Math.sqrt(SPECTRUM_MAX_REFERENCE_VOLUME / visualVolume)
+            : SPECTRUM_REFERENCE_VOLUME / visualVolume;
 
         nextBars = Array.from({ length: SPECTRUM_BIN_COUNT }, (_, index) => {
           const start = Math.floor((index / SPECTRUM_BIN_COUNT) * usableBins);
@@ -1780,7 +1790,7 @@ export default function MusicPage() {
             total += data[i] ?? 0;
           }
 
-          const average = total / Math.max(1, end - start);
+          const average = (total / Math.max(1, end - start)) * visualVolumeScale;
           const rightBias = index / Math.max(1, SPECTRUM_BIN_COUNT - 1);
           const highFreqCompensation = 1 + rightBias * 0.85;
           const floorLift = rightBias * 0.035;
@@ -2283,9 +2293,15 @@ export default function MusicPage() {
       {/* Player */}
       {showPlayer && currentSong && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl z-50">
-          <div className="bg-zinc-900/95 backdrop-blur-md rounded-xl p-4 border border-white/10 shadow-2xl">
+          {showSpectrum && (
+            <div className="pointer-events-none px-4">
+              <AudioSpectrumCanvas bars={spectrumBars} compact />
+            </div>
+          )}
+
+          <div className="relative bg-zinc-900/95 backdrop-blur-md rounded-xl p-4 pt-5 border border-white/10 shadow-2xl">
             {/* Progress Bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 rounded-t-xl overflow-hidden">
+            <div className="absolute left-0 right-0 top-0 h-1 bg-white/10 rounded-t-xl overflow-hidden">
               <div
                 className="h-full bg-green-500 transition-all pointer-events-none"
                 style={{ width: `${progress}%` }}
@@ -2300,7 +2316,7 @@ export default function MusicPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4 mt-2">
+            <div className="flex items-center justify-between gap-4 mt-1">
               {/* Song Info */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div
@@ -2703,8 +2719,12 @@ export default function MusicPage() {
               {/* 进度条 */}
               <div>
                 {showSpectrum && (
-                  <div className="mb-3">
-                    <AudioSpectrumCanvas bars={spectrumBars} />
+                  <div className="mb-3 flex items-center gap-2 text-xs">
+                    <span className="invisible">{formatTime(currentTime)}</span>
+                    <div className="flex-1">
+                      <AudioSpectrumCanvas bars={spectrumBars} />
+                    </div>
+                    <span className="invisible">{formatTime(duration)}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
